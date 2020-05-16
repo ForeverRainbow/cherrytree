@@ -1,16 +1,16 @@
 language: c++
 cache: apt
 os: linux
-dist: bionic
+dist: focal
 
 compiler:
   - gcc
 
 before_install:
   - >
-    sudo apt install build-essential libtool autoconf libgtkmm-3.0-dev
+    sudo apt install build-essential libgtkmm-3.0-dev
     libgtksourceviewmm-3.0-dev libxml++2.6-dev libsqlite3-dev
-    libcpputest-dev autopoint gettext intltool python3-lxml libxml2-utils libgspell-1-dev
+    libcpputest-dev gettext python3-lxml libgspell-1-dev
 
 addons:
   apt:
@@ -31,6 +31,7 @@ install:
       brew install cmake || brew upgrade cmake;
     fi
   - cmake --version
+
 before_script:
   # returns back to working dir
   - cd "${TRAVIS_BUILD_DIR}"
