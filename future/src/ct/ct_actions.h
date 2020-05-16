@@ -259,9 +259,8 @@ private:
     Glib::ustring _links_entries_post_dialog(CtDialogs::CtLinkEntry& link_entry);
     Glib::ustring _link_check_around_cursor();
     
-    Glib::ustring _current_prop_name;
-    Glib::ustring _current_prop_val;
-    bool _is_formatting = false;
+    
+    std::map<std::pair<std::string, std::string>, bool> _currentFormatting;
     sigc::connection _curr_buff_connection;
 public:
     // format actions

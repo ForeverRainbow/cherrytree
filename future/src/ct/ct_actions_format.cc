@@ -228,11 +228,15 @@ void CtActions::update_buffer_connections() {
     _curr_buff_connection = _curr_buffer()->signal_insert().connect(
                 [this](const Gtk::TextBuffer::iterator &pos,
                        const Glib::ustring &text, int) {
-                    if (_is_formatting) {
-                        Gtk::TextIter start(pos);
-                        start.backward_chars(text.length());
-                        auto tag_name = _pCtMainWin->get_text_tag_name_exist_or_create(_current_prop_name,_current_prop_val);
-                        _curr_buffer()->apply_tag_by_name(tag_name, start, pos);
+
+                    for (const auto& keypair : _currentFormatting) {
+                        if (keypair.second) {
+                            // Format is active, apply it
+                            Gtk::TextIter start(pos);
+                            start.backward_chars(text.length());
+                            auto tag_name = _pCtMainWin->get_text_tag_name_exist_or_create(keypair.first.first, keypair.first.second);
+                            _curr_buffer()->apply_tag_by_name(tag_name, start, pos);
+                        }
                     }
                 });
 }
@@ -246,7 +250,7 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
     if (_pCtMainWin->user_active() and !_is_curr_node_not_syntax_highlighting_or_error()) return;
     if (not text_buffer) text_buffer = _curr_buffer();
 
-
+    std::cout << "NAME: " << tag_property << " VAL: " << property_value << std::endl;
     if (not iter_sel_start and !iter_sel_end) {
         if (tag_property != CtConst::TAG_JUSTIFICATION) {
             if (not _is_there_selected_node_or_error()) return;
@@ -255,14 +259,13 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
             if (not text_buffer->get_has_selection()) {
                 if (tag_property != CtConst::TAG_LINK) {
                     // Attempt "old" functionality first
-                    _pCtMainWin->apply_tag_try_automatic_bounds(text_buffer, text_buffer->get_insert()->get_iter()));
-            
-                    if (!_is_formatting || (_current_prop_val != property_value)) {
-                        _current_prop_name = tag_property;
-                        _current_prop_val = property_value;
-                        _is_formatting = true;
+                    _pCtMainWin->apply_tag_try_automatic_bounds(text_buffer, text_buffer->get_insert()->get_iter());
+                    std::pair<std::string, std::string> format_keypair(tag_property, property_value);
+                    auto& is_formatting = _currentFormatting[format_keypair];
+                    if (!is_formatting) {
+                        is_formatting = true;
                     } else {
-                        _is_formatting = false;
+                        is_formatting = false;
                     }
                     
                 } else {
