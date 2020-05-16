@@ -749,11 +749,11 @@ GtkWidget* CtMenu::_add_separator(GtkWidget* pMenu)
     return pSeparatorItem->gobj();
 }
 template<typename T>
-std::string glide_property(std::string_view name, T value) {
+std::string glade_property(std::string_view name, T value) {
     return fmt::format("<property name='{}'>{}</property>", name, value);
 }
 
-std::string glide_object(std::string_view class_name, std::string_view id) {
+std::string glade_object(std::string_view class_name, std::string_view id) {
     return fmt::format("<child><object class='{}' id='{}'>", class_name, id);
 }
 
@@ -779,17 +779,17 @@ std::string CtMenu::_get_ui_str_toolbar()
                 else if (pAction->is_radio) {
                     if (!tool_groups[pAction->group_name]) {
                         tool_groups[pAction->group_name] = true;
-                        toolbarUIStr << glide_object("GtkRadioToolButton", pAction->group_name)
-                                     << glide_property("no_show_all", "True")
-                                     << glide_property("visible", "False")
-                                     << glide_property("active", "True")
+                        toolbarUIStr << glade_object("GtkRadioToolButton", pAction->group_name)
+                                     << glade_property("no_show_all", "True")
+                                     << glade_property("visible", "False")
+                                     << glade_property("active", "True")
                                      << "</object></child>";
                     }
-                    toolbarUIStr << glide_object("GtkRadioToolButton", pAction->id)
-                                 << glide_property("group", pAction->group_name);
+                    toolbarUIStr << glade_object("GtkRadioToolButton", pAction->id)
+                                 << glade_property("group", pAction->group_name);
                 }
-                else if (pAction->is_toggleable) toolbarUIStr << glide_object("GtkToggleToolButton", pAction->id);
-                else toolbarUIStr << glide_object("GtkToolButton", pAction->id);
+                else if (pAction->is_toggleable) toolbarUIStr << glade_object("GtkToggleToolButton", pAction->id);
+                else toolbarUIStr << glade_object("GtkToolButton", pAction->id);
                 toolbarUIStr << "<property name='action-name'>win." + pAction->id + "</property>"; // 'win.' is a default action group in Window
                 toolbarUIStr << "<property name='icon-name'>" + pAction->image + "</property>";
                 toolbarUIStr << "<property name='label'>" + pAction->name + "</property>";
