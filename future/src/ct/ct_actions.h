@@ -258,9 +258,10 @@ private:
     bool _links_entries_pre_dialog(const Glib::ustring& curr_link, CtDialogs::CtLinkEntry& link_entry);
     Glib::ustring _links_entries_post_dialog(CtDialogs::CtLinkEntry& link_entry);
     Glib::ustring _link_check_around_cursor();
+    void _apply_h_tag(const std::string& prop_val);
     
-    
-    std::map<std::pair<std::string, std::string>, bool> _currentFormatting;
+
+    std::map<std::string, std::pair<bool, std::string>> _currentFormatting;
     sigc::connection _curr_buff_connection;
 public:
     // format actions

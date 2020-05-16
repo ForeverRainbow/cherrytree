@@ -98,31 +98,32 @@ void CtActions::apply_tag_strikethrough()
     _apply_tag(CtConst::TAG_STRIKETHROUGH, CtConst::TAG_PROP_VAL_TRUE);
 }
 
+void CtActions::_apply_h_tag(const std::string& prop_val) {
+    if (not _is_curr_node_not_read_only_or_error()) return;
+    CtTextRange range = CtList(_pCtMainWin, _curr_buffer()).get_paragraph_iters();
+    if (not range.iter_start) {
+        _apply_tag(CtConst::TAG_SCALE, prop_val);
+        return;
+    }
+    _apply_tag(CtConst::TAG_SCALE, prop_val, range.iter_start, range.iter_end);
+}
+
 // The H1 Button was Pressed
 void CtActions::apply_tag_h1()
 {
-    if (not _is_curr_node_not_read_only_or_error()) return;
-    CtTextRange range = CtList(_pCtMainWin, _curr_buffer()).get_paragraph_iters();
-    if (not range.iter_start) return;
-    _apply_tag(CtConst::TAG_SCALE, CtConst::TAG_PROP_VAL_H1, range.iter_start, range.iter_end);
+    _apply_h_tag(CtConst::TAG_PROP_VAL_H1);
 }
 
 // The H2 Button was Pressed
 void CtActions::apply_tag_h2()
 {
-    if (not _is_curr_node_not_read_only_or_error()) return;
-    CtTextRange range = CtList(_pCtMainWin, _curr_buffer()).get_paragraph_iters();
-    if (not range.iter_start) return;
-    _apply_tag(CtConst::TAG_SCALE, CtConst::TAG_PROP_VAL_H2, range.iter_start, range.iter_end);
+    _apply_h_tag(CtConst::TAG_PROP_VAL_H2);
 }
 
 // The H3 Button was Pressed
 void CtActions::apply_tag_h3()
 {
-    if (not _is_curr_node_not_read_only_or_error()) return;
-    CtTextRange range = CtList(_pCtMainWin, _curr_buffer()).get_paragraph_iters();
-    if (not range.iter_start) return;
-    _apply_tag(CtConst::TAG_SCALE, CtConst::TAG_PROP_VAL_H3, range.iter_start, range.iter_end);
+    _apply_h_tag(CtConst::TAG_PROP_VAL_H3);
 }
 
 // The Small Button was Pressed
@@ -230,11 +231,12 @@ void CtActions::update_buffer_connections() {
                        const Glib::ustring &text, int) {
 
                     for (const auto& keypair : _currentFormatting) {
-                        if (keypair.second) {
+                        if (keypair.second.first) {
                             // Format is active, apply it
                             Gtk::TextIter start(pos);
                             start.backward_chars(text.length());
-                            auto tag_name = _pCtMainWin->get_text_tag_name_exist_or_create(keypair.first.first, keypair.first.second);
+                            auto tag_name = _pCtMainWin->get_text_tag_name_exist_or_create(keypair.first, keypair.second.second);
+                            std::cout << "TAG NAME: " << tag_name << std::endl;
                             _curr_buffer()->apply_tag_by_name(tag_name, start, pos);
                         }
                     }
@@ -249,7 +251,6 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
 {
     if (_pCtMainWin->user_active() and !_is_curr_node_not_syntax_highlighting_or_error()) return;
     if (not text_buffer) text_buffer = _curr_buffer();
-
     if (not iter_sel_start and !iter_sel_end) {
         if (tag_property != CtConst::TAG_JUSTIFICATION) {
             if (not _is_there_selected_node_or_error()) return;
@@ -259,13 +260,6 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
                 if (tag_property != CtConst::TAG_LINK) {
                     // Attempt "old" functionality first
                     _pCtMainWin->apply_tag_try_automatic_bounds(text_buffer, text_buffer->get_insert()->get_iter());
-                    std::pair<std::string, std::string> format_keypair(tag_property, property_value);
-                    auto& is_formatting = _currentFormatting[format_keypair];
-                    if (!is_formatting) {
-                        is_formatting = true;
-                    } else {
-                        is_formatting = false;
-                    }
                     
                 } else {
                     Glib::ustring tag_property_value = _link_check_around_cursor();
@@ -291,6 +285,16 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
             return;
         }
     }
+    
+    auto& is_formatting_pair = _currentFormatting[tag_property];
+    if (!is_formatting_pair.first || (is_formatting_pair.second != property_value)) {
+        is_formatting_pair.first = true;
+    } else {
+        is_formatting_pair.first = false;
+    }
+    is_formatting_pair.second = property_value;
+
+
     if (property_value.empty()) {
         if (tag_property == CtConst::TAG_LINK) {
             if (CtTextIterUtil::startswith_any(*iter_sel_start, CtConst::WEB_LINK_STARTERS)) {
