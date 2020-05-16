@@ -74,6 +74,44 @@ CtMenu::CtMenu(CtConfig* pCtConfig, CtActions* pActions)
     return _add_menu_item(pMenu, name, image, nullptr, nullptr, desc, nullptr, nullptr, nullptr);
 }
 
+
+CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::string& id, std::string name, std::string image, std::string built_in_shortcut, const std::string& desc, const sigc::slot<void>& run_action) {
+    auto run_lambd = [this, desc, id, run_action] {
+        Gtk::Toolbar* toolbar;
+        _rGtkBuilder->get_widget("ToolBar", toolbar);
+        auto children = toolbar->get_children();
+        for (auto* child : children) {
+            if (child->property_tooltip_text() == desc) {
+            
+                auto child_real = dynamic_cast<Gtk::ToggleToolButton*>(child);
+                if (!child_real) {
+                    std::cerr << "Invalid child\n";
+                    return;
+                }
+                
+                auto active = child_real->get_active();
+                auto is_active_btn = _activeToolButtons[id];
+                if (is_active_btn != active) return;
+
+                child_real->set_active(!active);
+                _activeToolButtons[id] = !active;
+
+                break;
+            }
+        
+        } 
+        run_action();
+
+        
+    };
+    
+    CtMenuAction ct_action{
+            std::move(category), id, std::move(name), std::move(image), std::move(built_in_shortcut), desc, std::move(run_lambd), true
+    };
+    return ct_action;
+}
+
+
 void CtMenu::init_actions(CtActions* pActions)
 {
     // stubs for menu bar
@@ -145,10 +183,13 @@ void CtMenu::init_actions(CtActions* pActions)
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_rm", "format_text_clear", _("_Remove Formatting"), KB_CONTROL+KB_SHIFT+"R", _("Remove the Formatting from the Selected Text"), sigc::mem_fun(*pActions, &CtActions::remove_text_formatting)});
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_color_fg", "color_foreground", _("Text _Color Foreground"), KB_SHIFT+KB_ALT+"F", _("Change the Color of the Selected Text Foreground"), sigc::mem_fun(*pActions, &CtActions::apply_tag_foreground)});
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_color_bg", "color_background", _("Text C_olor Background"), KB_SHIFT+KB_ALT+"B", _("Change the Color of the Selected Text Background"), sigc::mem_fun(*pActions, &CtActions::apply_tag_background)});
-    _actions.push_back(CtMenuAction{fmt_cat, "fmt_bold", "format-text-bold", _("Toggle _Bold Property"), KB_CONTROL+"B", _("Toggle Bold Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_bold)});
-    _actions.push_back(CtMenuAction{fmt_cat, "fmt_italic", "format-text-italic", _("Toggle _Italic Property"), KB_CONTROL+"I", _("Toggle Italic Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_italic)});
-    _actions.push_back(CtMenuAction{fmt_cat, "fmt_underline", "format-text-underline", _("Toggle _Underline Property"), KB_CONTROL+"U", _("Toggle Underline Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_underline)});
-    _actions.push_back(CtMenuAction{fmt_cat, "fmt_strikethrough", "format-text-strikethrough", _("Toggle Stri_kethrough Property"), KB_CONTROL+"E", _("Toggle Strikethrough Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_strikethrough)});
+    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_bold", "format-text-bold", _("Toggle _Bold Property"), KB_CONTROL + "B", _("Toggle Bold Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_bold)));
+    _actions.push_back(
+            _build_toggleable_action(fmt_cat, "fmt_italic", "format-text-italic", _("Toggle _Italic Property"), KB_CONTROL + "I", _("Toggle Italic Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_italic)));
+    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_underline", "format-text-underline", _("Toggle _Underline Property"), KB_CONTROL + "U", _("Toggle Underline Property of the Selected Text"),
+                                                sigc::mem_fun(*pActions, &CtActions::apply_tag_underline)));
+    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_strikethrough", "format-text-strikethrough", _("Toggle Stri_kethrough Property"), KB_CONTROL + "E", _("Toggle Strikethrough Property of the Selected Text"),
+                                                sigc::mem_fun(*pActions, &CtActions::apply_tag_strikethrough)));
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_h1", "format-text-large", _("Toggle h_1 Property"), KB_CONTROL+"1", _("Toggle h1 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h1)});
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_h2", "format-text-large2", _("Toggle h_2 Property"), KB_CONTROL+"2", _("Toggle h2 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h2)});
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_h3", "format-text-large3", _("Toggle h_3 Property"), KB_CONTROL+"3", _("Toggle h3 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h3)});
@@ -719,6 +760,7 @@ std::string CtMenu::_get_ui_str_toolbar()
             if (pAction)
             {
                 if (isOpenRecent) toolbarUIStr += "<child><object class='GtkMenuToolButton' id='RecentDocs'>";
+                else if (pAction->is_toggleable) toolbarUIStr += "<child><object class='GtkToggleToolButton'>";
                 else toolbarUIStr += "<child><object class='GtkToolButton'>";
                 toolbarUIStr += "<property name='action-name'>win." + pAction->id + "</property>"; // 'win.' is a default action group in Window
                 toolbarUIStr += "<property name='icon-name'>" + pAction->image + "</property>";
