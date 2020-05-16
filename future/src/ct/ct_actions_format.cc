@@ -219,6 +219,24 @@ void CtActions::apply_tag_justify_fill()
     _apply_tag(CtConst::TAG_JUSTIFICATION, CtConst::TAG_PROP_VAL_FILL, range.iter_start, range.iter_end);
 }
 
+void CtActions::update_buffer_connections() {
+    if (!_curr_buff_connection.empty()) {
+        _curr_buff_connection.disconnect();
+    }
+    
+    // Connect the handler to the new node buffer
+    _curr_buff_connection = _curr_buffer()->signal_insert().connect(
+                [this](const Gtk::TextBuffer::iterator &pos,
+                       const Glib::ustring &text, int) {
+                    if (_is_formatting) {
+                        Gtk::TextIter start(pos);
+                        start.backward_chars(text.length());
+                        auto tag_name = _pCtMainWin->get_text_tag_name_exist_or_create(_current_prop_name,_current_prop_val);
+                        _curr_buffer()->apply_tag_by_name(tag_name, start, pos);
+                    }
+                });
+}
+
 // Apply a tag
 void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring property_value /*= ""*/,
                 std::optional<Gtk::TextIter> iter_sel_start /*= std::nullopt*/,
@@ -236,21 +254,6 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
                 _link_entry = CtDialogs::CtLinkEntry(); // reset
             if (not text_buffer->get_has_selection()) {
                 if (tag_property != CtConst::TAG_LINK) {
-                    static bool connected = false;
-                    if (!connected) {
-                        _curr_buffer()->signal_insert().connect(
-                                [this](const Gtk::TextBuffer::iterator &pos,
-                                       const Glib::ustring &text, int) {
-                                    if (_is_formatting) {
-                                        Gtk::TextIter start(pos);
-                                        start.backward_chars(text.length());
-                                        auto tag_name = _pCtMainWin->get_text_tag_name_exist_or_create(_current_prop_name,_current_prop_val);
-                                        _curr_buffer()->apply_tag_by_name(tag_name, start, pos);
-                                    }
-                                });
-                        connected = true;
-                    }
-    
                     if (!_is_formatting || (_current_prop_val != property_value)) {
                         _current_prop_name = tag_property;
                         _current_prop_val = property_value;

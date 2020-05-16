@@ -262,7 +262,7 @@ private:
     Glib::ustring _current_prop_name;
     Glib::ustring _current_prop_val;
     bool _is_formatting = false;
-  
+    sigc::connection _curr_buff_connection;
 public:
     // format actions
     void apply_tag_latest();
@@ -288,6 +288,7 @@ public:
     void apply_tag_justify_right();
     void apply_tag_justify_fill();
 
+    void update_buffer_connections();
 private:
     // helper for edit actions
     void          _image_edit_dialog(Glib::RefPtr<Gdk::Pixbuf> rPixbuf,
