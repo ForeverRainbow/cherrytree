@@ -352,6 +352,11 @@ void CtActions::text_row_selection_duplicate()
     if (not proof.text_buffer) return;
     if (not _is_curr_node_not_read_only_or_error()) return;
     auto text_buffer = proof.text_buffer;
+
+
+    std::map<std::string, std::pair<bool, std::string>> buff_map;
+    _currentFormatting.swap(buff_map);
+
     if (proof.text_buffer->get_has_selection())
     {
         Gtk::TextIter iter_start, iter_end;
@@ -408,6 +413,7 @@ void CtActions::text_row_selection_duplicate()
         }
     }
     _pCtMainWin->get_state_machine().update_state();
+    _currentFormatting.swap(buff_map);
 }
 
 // Moves Up the Current Row/Selected Rows
