@@ -484,6 +484,8 @@ void CtTreeStore::text_view_apply_textbuffer(const CtTreeIter& treeIter, CtTextV
     pTextView->set_sensitive(true);
     pTextView->set_editable(not node.get_node_read_only());
 
+    _pCtMainWin->get_ct_actions()->update_buffer_connections();
+    
     for (CtAnchoredWidget* pCtAnchoredWidget : node.get_embedded_pixbufs_tables_codeboxes_fast())
     {
         Glib::RefPtr<Gtk::TextChildAnchor> rChildAnchor = pCtAnchoredWidget->getTextChildAnchor();

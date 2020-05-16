@@ -37,6 +37,9 @@ struct CtMenuAction
     std::string built_in_shortcut;
     std::string desc;
     sigc::slot<void> run_action;
+    bool is_toggleable = false;
+    bool is_radio = false;
+    std::string group_name = "";
 
     sigc::signal<void, bool> signal_set_sensitive = sigc::signal<void, bool>();
     sigc::signal<void, bool> signal_set_visible = sigc::signal<void, bool>();
@@ -116,4 +119,7 @@ private:
     Glib::RefPtr<Gtk::Builder> _rGtkBuilder;
     GtkAccelGroup*             _pAccelGroup;
     Gtk::Menu*                 _popupMenus[POPUP_MENU_TYPE::PopupMenuNum] = {};
+    CtActions* _pCtActions;
+    
+    CtMenuAction _build_toggleable_action(std::string category, const std::string &id, std::string name, std::string image, std::string built_in_shortcut, const std::string& desc, const sigc::slot<void>& run_action, std::string group_name = "");
 };
