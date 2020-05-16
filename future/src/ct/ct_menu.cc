@@ -62,7 +62,7 @@ const std::string& CtMenuAction::get_shortcut(CtConfig* pCtConfig) const
 
 
 CtMenu::CtMenu(CtConfig* pCtConfig, CtActions* pActions)
- : _pCtConfig(pCtConfig)
+ : _pCtConfig(pCtConfig), _pCtActions(pActions)
 {
     _pAccelGroup = gtk_accel_group_new();
     _rGtkBuilder = Gtk::Builder::create();
@@ -79,6 +79,9 @@ CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::s
     auto run_lambd = [this, desc, id, run_action] {
         Gtk::Toolbar* toolbar;
         static bool is_looping = false;
+        if (is_looping) return;
+        run_action();
+
         _rGtkBuilder->get_widget("ToolBar", toolbar);
         auto children = toolbar->get_children();
         for (auto* child : children) {
@@ -90,21 +93,13 @@ CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::s
                     return;
                 }
                 
-                auto active = child_real->get_active();
-                auto is_active_btn = _activeToolButtons[id];
-
-                if (is_looping) return;
-                
-                // If the stored state does not match the current state its a click, if not its a hotkey
-                _activeToolButtons[id] = (is_active_btn != active) ? active : !active;
                 is_looping = true;
-                child_real->set_active(_activeToolButtons[id]);
+                child_real->set_active(_pCtActions->get_last_selected_format_is_active());
                 is_looping = false;
                 break;
             }
         
-        } 
-        run_action();
+        }
 
         
     };

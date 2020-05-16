@@ -260,7 +260,7 @@ private:
     Glib::ustring _link_check_around_cursor();
     void _apply_h_tag(const std::string& prop_val);
     
-
+    bool _lastSelectedFormatActive = false;
     std::map<std::string, std::pair<bool, std::string>> _currentFormatting;
     sigc::connection _curr_buff_connection;
 public:
@@ -289,6 +289,8 @@ public:
     void apply_tag_justify_fill();
 
     void update_buffer_connections();
+    /// Whether the button for the last selected format should be active or not
+    constexpr bool get_last_selected_format_is_active() const { return _lastSelectedFormatActive; }
 private:
     // helper for edit actions
     void          _image_edit_dialog(Glib::RefPtr<Gdk::Pixbuf> rPixbuf,

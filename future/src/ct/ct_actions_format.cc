@@ -285,13 +285,14 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
             return;
         }
     }
-    
+
     auto& is_formatting_pair = _currentFormatting[tag_property];
     if (!is_formatting_pair.first || (is_formatting_pair.second != property_value)) {
         is_formatting_pair.first = true;
     } else {
         is_formatting_pair.first = false;
     }
+    _lastSelectedFormatActive = is_formatting_pair.first;
     is_formatting_pair.second = property_value;
 
 

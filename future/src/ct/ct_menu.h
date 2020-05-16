@@ -117,7 +117,7 @@ private:
     Glib::RefPtr<Gtk::Builder> _rGtkBuilder;
     GtkAccelGroup*             _pAccelGroup;
     Gtk::Menu*                 _popupMenus[POPUP_MENU_TYPE::PopupMenuNum] = {};
-    std::map<std::string, bool> _activeToolButtons;
+    CtActions* _pCtActions;
 
     CtMenuAction _build_toggleable_action(std::string category, const std::string &id, std::string name, std::string image, std::string built_in_shortcut, const std::string& desc, const sigc::slot<void>& run_action);
 };
