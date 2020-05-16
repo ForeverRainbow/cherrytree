@@ -78,6 +78,7 @@ CtMenu::CtMenu(CtConfig* pCtConfig, CtActions* pActions)
 CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::string& id, std::string name, std::string image, std::string built_in_shortcut, const std::string& desc, const sigc::slot<void>& run_action) {
     auto run_lambd = [this, desc, id, run_action] {
         Gtk::Toolbar* toolbar;
+        static bool is_looping = false;
         _rGtkBuilder->get_widget("ToolBar", toolbar);
         auto children = toolbar->get_children();
         for (auto* child : children) {
@@ -91,11 +92,14 @@ CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::s
                 
                 auto active = child_real->get_active();
                 auto is_active_btn = _activeToolButtons[id];
-                if (is_active_btn != active) return;
 
-                child_real->set_active(!active);
-                _activeToolButtons[id] = !active;
-
+                if (is_looping) return;
+                
+                // If the stored state does not match the current state its a click, if not its a hotkey
+                _activeToolButtons[id] = (is_active_btn != active) ? active : !active;
+                is_looping = true;
+                child_real->set_active(_activeToolButtons[id]);
+                is_looping = false;
                 break;
             }
         

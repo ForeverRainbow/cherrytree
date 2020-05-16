@@ -250,7 +250,6 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
     if (_pCtMainWin->user_active() and !_is_curr_node_not_syntax_highlighting_or_error()) return;
     if (not text_buffer) text_buffer = _curr_buffer();
 
-    std::cout << "NAME: " << tag_property << " VAL: " << property_value << std::endl;
     if (not iter_sel_start and !iter_sel_end) {
         if (tag_property != CtConst::TAG_JUSTIFICATION) {
             if (not _is_there_selected_node_or_error()) return;
