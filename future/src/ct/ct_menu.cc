@@ -75,37 +75,43 @@ CtMenu::CtMenu(CtConfig* pCtConfig, CtActions* pActions)
 }
 
 
-CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::string& id, std::string name, std::string image, std::string built_in_shortcut, const std::string& desc, const sigc::slot<void>& run_action) {
-    auto run_lambd = [this, desc, id, run_action] {
-        Gtk::Toolbar* toolbar;
+CtMenuAction CtMenu::_build_toggleable_action(std::string category, const std::string& id, std::string name, std::string image, std::string built_in_shortcut, const std::string& desc, const sigc::slot<void>& run_action, std::string group_name) {
+    auto run_lambd = [this, id, run_action, group_name] {
+        Gtk::Toolbar *toolbar;
         static bool is_looping = false;
         if (is_looping) return;
         run_action();
-
-        _rGtkBuilder->get_widget("ToolBar", toolbar);
-        auto children = toolbar->get_children();
-        for (auto* child : children) {
-            if (child->property_tooltip_text() == desc) {
-            
-                auto child_real = dynamic_cast<Gtk::ToggleToolButton*>(child);
-                if (!child_real) {
-                    std::cerr << "Invalid child\n";
-                    return;
-                }
-                
-                is_looping = true;
-                child_real->set_active(_pCtActions->get_last_selected_format_is_active());
-                is_looping = false;
-                break;
-            }
-        
+        bool has_group = !group_name.empty();
+    
+    
+        Gtk::ToggleToolButton *child = nullptr;
+        _rGtkBuilder->get_widget(id, child);
+        if (!child) {
+            std::cerr << "Invalid child\n";
+            return;
         }
-
-        
+        auto go_active = _pCtActions->get_last_selected_format_is_active();
+    
+        if (has_group && !go_active) {
+            Gtk::RadioToolButton *none_item = nullptr;
+            _rGtkBuilder->get_widget(group_name, none_item);
+            if (!none_item) {
+                std::cerr << "Could not find the none item for group: " << group_name << "\n";
+                return;
+            }
+            is_looping = true;
+            none_item->set_active(true);
+            is_looping = false;
+            none_item->hide();
+            return;
+        }
+        is_looping     = true;
+        child->set_active(go_active);
+        is_looping = false;
     };
     
     CtMenuAction ct_action{
-            std::move(category), id, std::move(name), std::move(image), std::move(built_in_shortcut), desc, std::move(run_lambd), true
+            std::move(category), id, std::move(name), std::move(image), std::move(built_in_shortcut), desc, std::move(run_lambd), true, !group_name.empty(), std::move(group_name)
     };
     return ct_action;
 }
@@ -189,9 +195,10 @@ void CtMenu::init_actions(CtActions* pActions)
                                                 sigc::mem_fun(*pActions, &CtActions::apply_tag_underline)));
     _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_strikethrough", "format-text-strikethrough", _("Toggle Stri_kethrough Property"), KB_CONTROL + "E", _("Toggle Strikethrough Property of the Selected Text"),
                                                 sigc::mem_fun(*pActions, &CtActions::apply_tag_strikethrough)));
-    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_h1", "format-text-large", _("Toggle h_1 Property"), KB_CONTROL+"1", _("Toggle h1 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h1)));
-    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_h2", "format-text-large2", _("Toggle h_2 Property"), KB_CONTROL+"2", _("Toggle h2 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h2)));
-    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_h3", "format-text-large3", _("Toggle h_3 Property"), KB_CONTROL+"3", _("Toggle h3 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h3)));
+    
+    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_h1", "format-text-large", _("Toggle h_1 Property"), KB_CONTROL+"1", _("Toggle h1 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h1), "group_hn"));
+    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_h2", "format-text-large2", _("Toggle h_2 Property"), KB_CONTROL+"2",  _("Toggle h2 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h2), "group_hn"));
+    _actions.push_back(_build_toggleable_action(fmt_cat, "fmt_h3", "format-text-large3", _("Toggle h_3 Property"), KB_CONTROL+"3", _("Toggle h3 Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_h3), "group_hn"));
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_small", "format-text-small", _("Toggle _Small Property"), KB_CONTROL+"0", _("Toggle Small Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_small)});
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_superscript", "format-text-superscript", _("Toggle Su_perscript Property"), None, _("Toggle Superscript Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_superscript)});
     _actions.push_back(CtMenuAction{fmt_cat, "fmt_subscript", "format-text-subscript", _("Toggle Su_bscript Property"), None, _("Toggle Subscript Property of the Selected Text"), sigc::mem_fun(*pActions, &CtActions::apply_tag_subscript)});
@@ -741,16 +748,26 @@ GtkWidget* CtMenu::_add_separator(GtkWidget* pMenu)
     gtk_menu_shell_append(GTK_MENU_SHELL(GTK_MENU(pMenu)), pSeparatorItem->gobj());
     return pSeparatorItem->gobj();
 }
+template<typename T>
+std::string glide_property(std::string_view name, T value) {
+    return fmt::format("<property name='{}'>{}</property>", name, value);
+}
+
+std::string glide_object(std::string_view class_name, std::string_view id) {
+    return fmt::format("<child><object class='{}' id='{}'>", class_name, id);
+}
+
 
 std::string CtMenu::_get_ui_str_toolbar()
 {
     std::vector<std::string> vecToolbarElements = str::split(_pCtConfig->toolbarUiList, ",");
-    std::string toolbarUIStr;
+    std::ostringstream toolbarUIStr;
+    std::map<std::string, bool> tool_groups;
     for (const std::string& element : vecToolbarElements)
     {
         if (element == CtConst::TAG_SEPARATOR)
         {
-            toolbarUIStr += "<child><object class='GtkSeparatorToolItem'/></child>";
+            toolbarUIStr << "<child><object class='GtkSeparatorToolItem'/></child>";
         }
         else
         {
@@ -758,25 +775,37 @@ std::string CtMenu::_get_ui_str_toolbar()
             CtMenuAction const* pAction = isOpenRecent ? find_action("ct_open_file") : find_action(element);
             if (pAction)
             {
-                if (isOpenRecent) toolbarUIStr += "<child><object class='GtkMenuToolButton' id='RecentDocs'>";
-                else if (pAction->is_toggleable) toolbarUIStr += "<child><object class='GtkToggleToolButton'>";
-                else toolbarUIStr += "<child><object class='GtkToolButton'>";
-                toolbarUIStr += "<property name='action-name'>win." + pAction->id + "</property>"; // 'win.' is a default action group in Window
-                toolbarUIStr += "<property name='icon-name'>" + pAction->image + "</property>";
-                toolbarUIStr += "<property name='label'>" + pAction->name + "</property>";
-                toolbarUIStr += "<property name='tooltip-text'>" + pAction->desc + "</property>";
-                toolbarUIStr += "<property name='visible'>True</property>";
-                toolbarUIStr += "<property name='use_underline'>True</property>";
-                toolbarUIStr += "</object></child>";
+                if (isOpenRecent) toolbarUIStr << "<child><object class='GtkMenuToolButton' id='RecentDocs'>";
+                else if (pAction->is_radio) {
+                    if (!tool_groups[pAction->group_name]) {
+                        tool_groups[pAction->group_name] = true;
+                        toolbarUIStr << glide_object("GtkRadioToolButton", pAction->group_name)
+                                     << glide_property("no_show_all", "True")
+                                     << glide_property("visible", "False")
+                                     << glide_property("active", "True")
+                                     << "</object></child>";
+                    }
+                    toolbarUIStr << glide_object("GtkRadioToolButton", pAction->id)
+                                 << glide_property("group", pAction->group_name);
+                }
+                else if (pAction->is_toggleable) toolbarUIStr << glide_object("GtkToggleToolButton", pAction->id);
+                else toolbarUIStr << glide_object("GtkToolButton", pAction->id);
+                toolbarUIStr << "<property name='action-name'>win." + pAction->id + "</property>"; // 'win.' is a default action group in Window
+                toolbarUIStr << "<property name='icon-name'>" + pAction->image + "</property>";
+                toolbarUIStr << "<property name='label'>" + pAction->name + "</property>";
+                toolbarUIStr << "<property name='tooltip-text'>" + pAction->desc + "</property>";
+                toolbarUIStr << "<property name='visible'>True</property>";
+                toolbarUIStr << "<property name='use_underline'>True</property>";
+                toolbarUIStr << "</object></child>";
             }
         }
     }
-    toolbarUIStr = "<interface><object class='GtkToolbar' id='ToolBar'>"
+    std::string toolbar_ui_str = "<interface><object class='GtkToolbar' id='ToolBar'>"
             "<property name='visible'>True</property>"
             "<property name='can_focus'>False</property>"
-            + toolbarUIStr +
+            + toolbarUIStr.str() +
             "</object></interface>";
-    return toolbarUIStr;
+    return toolbar_ui_str;
 }
 
 
