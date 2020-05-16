@@ -254,13 +254,17 @@ void CtActions::_apply_tag(const Glib::ustring& tag_property, Glib::ustring prop
                 _link_entry = CtDialogs::CtLinkEntry(); // reset
             if (not text_buffer->get_has_selection()) {
                 if (tag_property != CtConst::TAG_LINK) {
-                    if (!_is_formatting || (_current_prop_val != property_value)) {
-                        _current_prop_name = tag_property;
-                        _current_prop_val = property_value;
-                        _is_formatting = true;
-                    } else {
-                        _is_formatting = false;
+                    // Attempt "old" functionality first
+                    if (not _pCtMainWin->apply_tag_try_automatic_bounds(text_buffer, text_buffer->get_insert()->get_iter())) {
+                        if (!_is_formatting || (_current_prop_val != property_value)) {
+                            _current_prop_name = tag_property;
+                            _current_prop_val = property_value;
+                            _is_formatting = true;
+                        } else {
+                            _is_formatting = false;
+                        }
                     }
+                    
                 } else {
                     Glib::ustring tag_property_value = _link_check_around_cursor();
                     if (tag_property_value == "") {
